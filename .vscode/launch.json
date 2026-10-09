@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "cwd": "${workspaceFolder}/backend",
+      "args": ["app.main:app"],
+      "jinja": true,
+      "justMyCode": false,
+      "subProcess": true,
+      "env": {
+        "HF_ENDPOINT": "https://hf-mirror.com"
+      }
+    }
+  ]
+}
