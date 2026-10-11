@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 
 const router = createRouter({
@@ -36,6 +36,11 @@ const router = createRouter({
           path: 'ai-chat',
           name: 'AIChat',
           component: () => import('@/views/AIChat.vue')
+        },
+        {
+          path: 'kb-upload',
+          name: 'KbUpload',
+          component: () => import('@/views/KbUpload.vue')
         }
       ]
     },
@@ -44,10 +49,8 @@ const router = createRouter({
   ]
 })
 
-// 路由守卫：验证token
 router.beforeEach((to, from) => {
   const token = getToken()
-
   if (to.path === '/login' || to.path === '/register') {
     return true
   } else {

@@ -36,3 +36,7 @@ ALLOWED_EXTENSIONS = {
     ".xlsx",
     ".zip",
 }
+
+# 知识库相关配置
+KB_DIR = BASE_DIR / "data" / "kb"
+KB_ALLOWED_EXTENSIONS = {".txt", ".doc", ".docx", ".pdf", ".md"}

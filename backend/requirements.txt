@@ -1,4 +1,4 @@
-fastapi==0.115.13
+﻿fastapi==0.115.13
 uvicorn==0.34.0
 sqlalchemy==2.0.41
 pymysql==1.1.1
@@ -12,4 +12,5 @@ sentence-transformers==6.0.1
 langgraph==1.2.14
 langchain-openai==1.6.7
 langchain-core==1.6.7
- 
+python-docx==1.2.0
+PyMuPDF==1.28.2

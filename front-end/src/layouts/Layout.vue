@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <el-container style="min-height: 100vh">
       <el-header
@@ -45,6 +45,10 @@
               <el-icon><ChatDotRound /></el-icon>
               <span>AI智能助手</span>
             </el-menu-item>
+            <el-menu-item index="/manager/kb-upload" v-if="userInfo?.role === 'admin'">
+              <el-icon><FolderOpened /></el-icon>
+              <span>知识库管理</span>
+            </el-menu-item>
             <el-menu-item index="/manager/lablist" v-if="userInfo?.role === 'student'">
               <el-icon><OfficeBuilding /></el-icon>
               <span>实验室列表</span>
@@ -89,7 +93,9 @@ import {
   User,
   OfficeBuilding,
   Tickets,
-  DocumentChecked
+  DocumentChecked,
+  FolderOpened,
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import { useUser } from '@/utils/user'
 import { logout } from '@/utils/auth'
@@ -114,7 +120,6 @@ const handleCommand = (command) => {
   border-radius: 999px;
   transition: background-color 0.2s ease;
 }
-
 .user-trigger:hover {
   background-color: #f5f7fa;
 }

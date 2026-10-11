@@ -1,9 +1,11 @@
+from pathlib import Path
+
+import chromadb
 from chromadb.api.models.Collection import Collection
 from chromadb.utils import embedding_functions
-import chromadb
-from app.config import BASE_DIR
 
-KB_DIR = BASE_DIR / "data" / "kb"
+from app.config import BASE_DIR, KB_DIR
+
 CHROMA_DIR = BASE_DIR / "data" / "chroma"
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 
@@ -13,11 +15,10 @@ _embedding_fn = None
 
 
 def get_embedding_fn():
-    """懒加载 embedding 模型：只加载一次，之后复用同一个实例"""
+    """惰加载 embedding 模型：只加载一次，之后复用同一个实例"""
     global _embedding_fn
     if _embedding_fn is not None:
         return _embedding_fn
-    # SentenceTransformerEmbeddingFunction 自带类级缓存，同名模型也不会重复加载
     _embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
         model_name=EMBEDDING_MODEL_NAME
     )
@@ -26,7 +27,6 @@ def get_embedding_fn():
 
 def get_collcetion() -> Collection:
     """向量库的初始化"""
-
     global _collection
     if _collection is not None:
         return _collection
@@ -40,7 +40,9 @@ def get_collcetion() -> Collection:
         ids = []
         docs = []
         metas = []
-        for path in sorted(KB_DIR.glob("*.md")):
+        for path in sorted(KB_DIR.glob("*")):
+            if path.suffix.lower() not in (".md", ".txt"):
+                continue
             text = path.read_text(encoding="UTF-8").strip()
             if not text:
                 continue
@@ -54,7 +56,7 @@ def get_collcetion() -> Collection:
 
 
 def warmup():
-    """启动时预热：把模型加载 + 首次检索的开销付在启动阶段，别落在第一个用户请求上"""
+    """启动时预热"""
     col = get_collcetion()
     if col.count() > 0:
         col.query(query_texts=["预热"], n_results=1)
@@ -71,26 +73,59 @@ def search(query: str):
     metas = (res.get("metadatas") or [[]])[0]
     distances = (res.get("distances") or [[]])[0]
 
-    """
-    以下是检索出来的资料：
-    [预约规则.md]
-
-    # 实验室预约规则...
-
-    
-    [安全规范.md]
-
-    安全规范....
-    """
     score_parts = []
-    for doc, metas, dist in zip(docs, metas, distances):
-        # 0-1 越接近1表示越相关
+    for doc, m, dist in zip(docs, metas, distances):
         score = 1 / (1 + dist)
         if score < 0.5:
             continue
-        name = metas.get("source") or ""
+        name = m.get("source") or ""
         score_parts.append({"score": score, "content": f"[{name}]\n{doc}"})
-    print(f"检索出来的 score_parts：{score_parts}")
     score_parts.sort(key=lambda x: x["score"], reverse=True)
     final_parts = [item["content"] for item in score_parts[:2]]
     return "\n\n".join(final_parts)
+
+
+def extract_text_from_file(file_path: Path, original_ext: str) -> str:
+    """从上传的文件中提取文本内容"""
+    ext = original_ext.lower()
+    if ext == ".md":
+        return file_path.read_text(encoding="utf-8", errors="replace")
+    elif ext == ".txt":
+        return file_path.read_text(encoding="utf-8", errors="replace")
+    elif ext == ".pdf":
+        return _extract_pdf_text(file_path)
+    elif ext in (".doc", ".docx"):
+        return _extract_docx_text(file_path)
+    return ""
+
+
+def _extract_pdf_text(file_path: Path) -> str:
+    try:
+        import fitz
+    except ImportError:
+        return ""
+    doc = fitz.open(file_path)
+    parts = []
+    for page in doc:
+        parts.append(page.get_text())
+    doc.close()
+    return "\n".join(parts)
+
+
+def _extract_docx_text(file_path: Path) -> str:
+    try:
+        import docx
+    except ImportError:
+        return ""
+    doc = docx.Document(str(file_path))
+    return "\n".join(p.text for p in doc.paragraphs)
+
+
+def add_document(disk_name: str, content: str, source_name: str):
+    """将新的文档添加到向量库中"""
+    col = get_collcetion()
+    existing = col.get(ids=[disk_name])
+    if existing and existing.get("ids"):
+        col.update(ids=[disk_name], documents=[content], metadatas=[{"source": source_name}])
+    else:
+        col.add(ids=[disk_name], documents=[content], metadatas=[{"source": source_name}])
